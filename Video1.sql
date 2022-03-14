@@ -297,3 +297,69 @@ GROUP BY GROUPING SETS
 		)
 ORDER BY Species, Breed;
 
+
+
+
+
+
+
+
+
+
+
+-- Must use the GROUPING function to distinguish "All staff" from individuals
+SELECT	COALESCE(CAST(YEAR(V.Vaccination_Time) AS VARCHAR(10)), 'All Years') AS Year,
+		COALESCE(V.Species, 'All Species') AS Species,
+		COALESCE(V.Email, 'All Staff') AS Email,
+		CASE WHEN GROUPING(V.Email) = 0
+			THEN MAX(P.First_Name) -- Dummy aggregate
+			ELSE ''
+			END AS First_Name,
+		CASE WHEN GROUPING(V.Email) = 0
+			THEN MAX(P.Last_Name) -- Dummy aggregate
+			ELSE ''
+			END AS Last_Name,
+		COUNT(*) AS Number_Of_Vaccinations,
+		MAX(YEAR(V.Vaccination_Time)) AS Latest_Vaccination_Year
+FROM	Vaccinations AS V
+		INNER JOIN
+		Persons AS P
+			ON P.Email = V.Email
+GROUP BY GROUPING SETS	(
+							(),
+							YEAR(V.Vaccination_Time),
+							V.Species,
+							(YEAR(V.Vaccination_Time), V.Species),
+							(V.Email),
+							(V.Email, V.Species)
+						)
+ORDER BY Year, Species, First_Name, Last_Name;
+
+/* PostgreSQL
+SELECT	COALESCE(CAST(EXTRACT(YEAR FROM V.Vaccination_Time) AS VARCHAR(10)), 'All Years') AS Year,
+		COALESCE(V.Species, 'All Species') AS Species,
+		COALESCE(V.Email, 'All Staff') AS Email,
+		CASE WHEN GROUPING(V.Email) = 0
+			THEN MAX(P.First_Name) -- Dummy aggregate
+			ELSE ' '
+			END AS First_Name,
+		CASE WHEN GROUPING(V.Email) = 0
+			THEN MAX(P.Last_Name) -- Dummy aggregate
+			ELSE ' '
+			END AS Last_Name,
+		COUNT(*) AS Number_Of_Vaccinations,
+		MAX(EXTRACT(YEAR FROM V.Vaccination_Time)) AS Latest_Vaccination_Year
+FROM	Vaccinations AS V
+		INNER JOIN
+		Persons AS P
+			ON P.Email = V.Email
+GROUP BY GROUPING SETS	(
+							(),
+							EXTRACT(YEAR FROM V.Vaccination_Time),
+							V.Species,
+							(EXTRACT(YEAR FROM V.Vaccination_Time), V.Species),
+							(V.Email),
+							(V.Email, V.Species)
+						)
+ORDER BY Year, V.Species NULLS FIRST, First_Name, Last_Name;
+*/
