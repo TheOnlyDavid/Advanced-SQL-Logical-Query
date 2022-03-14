@@ -1,32 +1,3 @@
---------------------------------------------
--- LinkedIn Learning -----------------------
--- Advanced SQL - Query Processing Part 2 --
--- Ami Levin 2020 --------------------------
--- .\Chapter3\Video1.sql -------------------
---------------------------------------------
-
--- GitHub
-https://github.com/ami-levin/LinkedIn/tree/master/Query%20Processing%20Part%202/Chapter4%20-%20Recursions%20and%20Cursors/Video1.sql
-
--- DBFiddle UK
-/*SQL Server*/		https://dbfiddle.uk/?rdbms=sqlserver_2019&fiddle=f9843048f7c533c95d3b1accda60c88c&hide=3
-/*PostgreSQL*/	https://dbfiddle.uk/?rdbms=postgres_12&fiddle=6e4189e143ecf4fa6820beb05057c191&hide=1
-
--- Additional Resources
-https://www.itprotoday.com/sql-server/ordered-set-functions
-https://www.itprotoday.com/sql-server/inverse-distribution-functions
-https://docs.microsoft.com/en-us/sql/t-sql/functions/percentile-disc-transact-sql
-https://docs.microsoft.com/en-us/sql/t-sql/functions/percentile-cont-transact-sql
-
-/*
-   ____           __                   __   _____      __     ______                 __  _                 
-  / __ \_________/ /__  ________  ____/ /  / ___/___  / /_   / ____/_  ______  _____/ /_(_)___  ____  _____
- / / / / ___/ __  / _ \/ ___/ _ \/ __  /   \__ \/ _ \/ __/  / /_  / / / / __ \/ ___/ __/ / __ \/ __ \/ ___/
-/ /_/ / /  / /_/ /  __/ /  /  __/ /_/ /   ___/ /  __/ /_   / __/ / /_/ / / / / /__/ /_/ / /_/ / / / (__  ) 
-\____/_/   \__,_/\___/_/   \___/\__,_/   /____/\___/\__/  /_/    \__,_/_/ /_/\___/\__/_/\____/_/ /_/____/  
-                                                                                                           
-*/
-
 -- String aggregate
 SELECT	Adoption_Date,
 		SUM(Adoption_Fee) AS Total_Fee,
@@ -96,13 +67,233 @@ SELECT  Species,
 		WITHIN GROUP (ORDER BY Number_Of_Vaccinations DESC) AS Inverse_Discrete
 FROM    Vaccination_Ranking
 GROUP BY Species;
+
+
+
+
+
+-- Multi level aggregates
+SELECT	YEAR(Adoption_Date) AS Year,
+		MONTH(Adoption_Date) AS Month,
+		COUNT(*) AS Monthly_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date), MONTH(Adoption_Date);
+
+SELECT	YEAR(Adoption_Date) AS Year,
+		COUNT(*) AS Annual_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date);
+
+SELECT	COUNT(*) AS Total_Adoptions
+FROM	Adoptions
+GROUP BY ();
+
+-- Add UNION ALL... no good
+SELECT	YEAR(Adoption_Date) AS Year,
+		MONTH(Adoption_Date) AS Month,
+		COUNT(*) AS Number_Of_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date), MONTH(Adoption_Date)
+UNION ALL
+SELECT	YEAR(Adoption_Date) AS Year,
+		COUNT(*) AS Annual_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date)
+UNION ALL
+SELECT	COUNT(*) AS Total_Adoptions
+FROM	Adoptions
+GROUP BY ();
+
+-- Try string placeholders... no good
+SELECT	YEAR(Adoption_Date) AS Year,
+		MONTH(Adoption_Date) AS Month,
+		COUNT(*) AS Number_Of_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date), MONTH(Adoption_Date)
+UNION ALL
+SELECT	YEAR(Adoption_Date) AS Year,
+		'All Months' AS Month,
+		COUNT(*) AS Annual_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date)
+UNION ALL
+SELECT	'All Years' AS Year,	
+		'All Months' AS Month,
+		COUNT(*) AS Total_Adoptions
+FROM	Adoptions
+GROUP BY ()
+ORDER BY Year, Month;
+
+-- Use NULL placeholders... very good!
+SELECT	YEAR(Adoption_Date) AS Year,
+		MONTH(Adoption_Date) AS Month,
+		COUNT(*) AS Monthly_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date), MONTH(Adoption_Date)
+UNION ALL
+SELECT	YEAR(Adoption_Date) AS Year,
+		NULL AS Month,
+		COUNT(*) AS Annual_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date)
+UNION ALL
+SELECT	NULL AS Year,	
+		NULL AS Month,
+		COUNT(*) AS Total_Adoptions
+FROM	Adoptions
+GROUP BY ()
+ORDER BY Year, Month;
+
+-- Reuse lowest granularity aggregate in WITH clause
+WITH Aggregated_Adoptions
+AS
+(
+SELECT	YEAR(Adoption_Date) AS Year,
+		MONTH(Adoption_Date) AS Month,
+		COUNT(*) AS Monthly_Adoptions
+FROM	Adoptions
+GROUP BY YEAR(Adoption_Date), MONTH(Adoption_Date)
+)
+SELECT	*
+FROM	Aggregated_Adoptions
+UNION ALL
+SELECT	Year,
+		NULL,
+		COUNT(*)
+FROM	Aggregated_Adoptions
+GROUP BY Year
+UNION ALL
+SELECT	NULL,
+		NULL,
+		COUNT(*)
+FROM	Aggregated_Adoptions
+GROUP BY ();
+
+
+/* PostgreSQL
+-- Reuse lowest granularity aggregate in WITH clause
+WITH Aggregated_Adoptions
+AS
+(
+SELECT	EXTRACT(year FROM Adoption_Date) AS Year,
+		EXTRACT(month FROM Adoption_Date) AS Month,
+		COUNT(*) AS Monthly_Adoptions
+FROM	Adoptions
+GROUP BY EXTRACT(year FROM Adoption_Date) , EXTRACT(month FROM Adoption_Date)
+)
+SELECT	*
+FROM	Aggregated_Adoptions
+UNION ALL
+SELECT	Year,
+		NULL,
+		COUNT(*)
+FROM	Aggregated_Adoptions
+GROUP BY Year
+UNION ALL
+SELECT	NULL,
+		NULL,
+		COUNT(*)
+FROM	Aggregated_Adoptions
+GROUP BY ();
 */
 
-/*
-  ________  ________   _______   ______ 
- /_  __/ / / / ____/  / ____/ | / / __ \
-  / / / /_/ / __/    / __/ /  |/ / / / /
- / / / __  / /___   / /___/ /|  / /_/ / 
-/_/ /_/ /_/_____/  /_____/_/ |_/_____/  
-                                        
+-- GROUPING SETS
+-- Equivalent to no GROUP BY
+SELECT	COUNT(*) AS Total_Adoptions
+FROM	Adoptions
+GROUP BY GROUPING SETS	
+		(
+			()
+		);
+
+-- Equivalent to GROUP BY YEAR(Adoption_Date)
+SELECT	YEAR(Adoption_Date) AS Year,
+		COUNT(*) AS Annual_Adoptions
+FROM	Adoptions
+GROUP BY GROUPING SETS	
+		(
+			YEAR(Adoption_Date)
+		)
+ORDER BY Year;
+
+-- Equivalent to GROUP BY YEAR(Adoption_Date), MONTH(Adoption_Date)
+SELECT	YEAR(Adoption_Date) AS Year,
+		MONTH(Adoption_Date) AS Month,
+		COUNT(*) AS Monthly_Adoptions
+FROM	Adoptions
+GROUP BY GROUPING SETS	
+		(
+			(
+				YEAR(Adoption_Date), MONTH(Adoption_Date)
+			)
+		)
+ORDER BY Year, Month;
+
+-- Be careful with the parentheses!
+SELECT	YEAR(Adoption_Date) AS Year,
+		MONTH(Adoption_Date) AS Month,
+		COUNT(*) AS Monthly_Adoptions
+FROM	Adoptions
+GROUP BY GROUPING SETS	
+		(
+			YEAR(Adoption_Date), MONTH(Adoption_Date)
+		)
+ORDER BY Year, Month;
+
+-- All in one...
+SELECT	YEAR(Adoption_Date) AS Year,
+		MONTH(Adoption_Date) AS Month,
+		COUNT(*) AS Monthly_Adoptions
+FROM	Adoptions
+GROUP BY GROUPING SETS	
+		(
+			(YEAR(Adoption_Date), MONTH(Adoption_Date)),
+			YEAR(Adoption_Date),
+			()
+		)
+ORDER BY Year, Month;
+
+/* PostgreSQL
+-- All in one...
+SELECT	EXTRACT(year FROM Adoption_Date) AS Year,
+		EXTRACT(month FROM Adoption_Date) AS Month,
+		COUNT(*) AS Monthly_Adoptions
+FROM	Adoptions
+GROUP BY GROUPING SETS	
+		(
+			(EXTRACT(year FROM Adoption_Date), extract(month FROM Adoption_Date)),
+			EXTRACT(year FROM Adoption_Date),
+			()
+		)
+ORDER BY Year, Month;
 */
+
+-- Non hierarchical grouping sets
+SELECT	YEAR(Adoption_Date) AS Year,
+		Adopter_Email,
+		COUNT(*) AS Annual_Adoptions
+FROM	Adoptions
+GROUP BY GROUPING SETS	
+		(
+			YEAR(Adoption_Date),
+			Adopter_Email
+		);
+
+-- Handling NULLs
+SELECT	COALESCE(Species, 'All') AS Species,
+		CASE 
+			WHEN GROUPING(Breed) = 1
+			THEN 'All'
+			ELSE Breed
+		END AS Breed,
+		GROUPING(Breed) AS Is_This_All_Breeds,
+		COUNT(*) AS Number_Of_Animals
+FROM	Animals
+GROUP BY GROUPING SETS 
+		(
+			Species,
+			Breed,
+			()
+		)
+ORDER BY Species, Breed;
+
