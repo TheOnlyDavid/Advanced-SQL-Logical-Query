@@ -6,4 +6,4 @@ This repo is created as a self excercise.
 PRO TIPS!
 
    - Allways check schema of tables and look for the primary key(s), empirical knowledge is not enough!
-   - 
+   - COALESCE
