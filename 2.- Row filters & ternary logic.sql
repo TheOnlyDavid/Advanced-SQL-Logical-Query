@@ -1,12 +1,3 @@
--------------------------------------
--- LinkedIn Learning ----------------
--- Advanced SQL - Query Processing --
--- Ami Levin 2020 -------------------
--- .\Chapter3\Video3.sql ------------
--------------------------------------
-
--- https://dbfiddle.uk/?rdbms=sqlserver_2019&fiddle=79efadcf4cf6141815636c5b1acc81ca&hide=3
-
 USE Animal_Shelter; -- For SQL Server
 
 SELECT	*
