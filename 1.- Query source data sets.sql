@@ -1,10 +1,3 @@
--------------------------------------
--- LinkedIn Learning ----------------
--- Advanced SQL - Query Processing --
--- Ami Levin 2020 -------------------
--- .\Chapter2\Video4.sql ------------
--------------------------------------
-
 /*
 Animal vaccinations report.
 ---------------------------
