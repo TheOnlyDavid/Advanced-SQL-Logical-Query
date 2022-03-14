@@ -136,3 +136,27 @@ SELECT	*
 FROM	Staff AS S 
 		CROSS APPLY
 		(SELECT NEWID() AS Y) AS B;
+
+
+
+
+
+
+-- Find purebred candidates of the same species and breed - Solution with > shortcut 
+-- 	  !!! Only works if collation is dictionary based, and if case insensitive or casing is consistent !!!
+SELECT	A1.Species,
+		A1.Breed AS Breed,
+		A1.Name AS Male,
+		A2.Name AS Female
+FROM	Animals AS A1
+		INNER JOIN
+		Animals AS A2
+		ON	A1.Species = A2.Species
+			AND
+			A1.Breed = A2.Breed -- Removes NULL breeds
+			AND
+			A1.Name <> A2.Name
+			AND
+			A1.Gender > A2.Gender
+ORDER BY 	A1.Species, 
+			A1.Breed;
